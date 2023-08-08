@@ -1,0 +1,18 @@
+[package]
+name = "vulkan_learn"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.28.6"
+ash = { git = "https://github.com/ash-rs/ash" }
+ash_window = { package = "ash-window", git = "https://github.com/ash-rs/ash" }
+raw-window-handle = "0.5.2"
+arrayvec = "0.7.4"
+shaderc = { git = "https://github.com/google/shaderc-rs" }
+ahash = { version = "0.8.3", features = ["no-rng"], default-features = false }
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true

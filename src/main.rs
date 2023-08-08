@@ -1,0 +1,57 @@
+mod fps_counter;
+mod no_engine;
+
+use winit::{
+    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event_loop,
+};
+
+fn main() {
+    let event_loop = event_loop::EventLoop::new();
+    let window = winit::window::WindowBuilder::new()
+        .with_title("Hello winit")
+        // TODO: Later remove
+        .with_resizable(false)
+        .build(&event_loop)
+        .unwrap();
+
+    let mut no_engine = no_engine::NoEngine::new(&window);
+    let mut fps_counter = fps_counter::FPSCounter::new();
+
+    let mut does_show_fps = false;
+    let mut next_time_to_show = std::time::Instant::now() + std::time::Duration::from_secs(1);
+
+    event_loop.run(move |event, _, control_flow| match event {
+        Event::WindowEvent { window_id, event } if window_id == window.id() => match event {
+            WindowEvent::CloseRequested => control_flow.set_exit(),
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(VirtualKeyCode::Escape),
+                        ..
+                    },
+                ..
+            } => control_flow.set_exit(),
+            _ => (),
+        },
+        Event::MainEventsCleared => {
+            window.request_redraw();
+
+            if std::time::Instant::now() >= next_time_to_show {
+                does_show_fps = !does_show_fps;
+            }
+        }
+        Event::RedrawRequested(_) => {
+            no_engine.draw();
+            fps_counter.frame();
+
+            if does_show_fps {
+                window.set_title(&format!("FPS: {}", fps_counter.fps()));
+                does_show_fps = !does_show_fps;
+                next_time_to_show = std::time::Instant::now() + std::time::Duration::from_secs(1);
+            }
+        }
+        _ => (),
+    });
+}
