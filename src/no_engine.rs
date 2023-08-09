@@ -1,14 +1,15 @@
 mod allocator;
+mod asset;
 mod command;
 mod debug_utils;
 mod device;
+mod objects;
 mod pipeline;
 mod rendering_info;
 mod shader;
 mod surface;
 mod swapchain;
 mod utils;
-mod objects;
 
 use std::{ffi::CString, mem::ManuallyDrop, rc::Rc};
 
