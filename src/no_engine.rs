@@ -1,3 +1,4 @@
+mod allocator;
 mod command;
 mod debug_utils;
 mod device;
@@ -7,6 +8,7 @@ mod shader;
 mod surface;
 mod swapchain;
 mod utils;
+mod objects;
 
 use std::{ffi::CString, mem::ManuallyDrop, rc::Rc};
 
@@ -347,7 +349,7 @@ impl Drop for NoEngine<'_> {
         unsafe {
             let device = &self.device_manager.device;
             device.device_wait_idle().unwrap();
-            
+
             self.pipeline_manager.clear_pipeline_objects(device);
 
             self.shader_manager.clear_shader_modules();
