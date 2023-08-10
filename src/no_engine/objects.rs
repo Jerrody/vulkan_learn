@@ -1,1 +1,5 @@
-mod mesh;
+pub enum ObjectType {
+    Mesh,
+}
+
+pub mod mesh;

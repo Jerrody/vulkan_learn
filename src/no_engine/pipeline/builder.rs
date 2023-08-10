@@ -25,7 +25,9 @@ impl<'a> PipelineBuilder<'a> {
         shader_stage: vk::ShaderStageFlags,
     ) -> Self {
         let entry_point = unsafe {
-            std::ffi::CStr::from_ptr(crate::no_engine::shader::ShaderManager::DEFAULT_ENTRY_POINT_RAW)
+            std::ffi::CStr::from_ptr(
+                crate::no_engine::shader::ShaderManager::DEFAULT_ENTRY_POINT_RAW,
+            )
         };
 
         let shader_stage_info = vk::PipelineShaderStageCreateInfo::default()
@@ -192,17 +194,11 @@ impl<'a> PipelineBuilder<'a> {
     pub fn build(
         self,
         device: &ash::Device,
-        viewports: &[vk::Viewport],
-        scissors: &[vk::Rect2D],
         color_attachment_formats: &[vk::Format],
     ) -> vk::Pipeline {
         let color_blend_state = vk::PipelineColorBlendStateCreateInfo::default()
             .attachments(&self.color_blend_attachment_states)
             .logic_op(vk::LogicOp::COPY);
-
-        let viewport_state = vk::PipelineViewportStateCreateInfo::default()
-            .viewports(viewports)
-            .scissors(scissors);
 
         let mut pipeline_rendering_info = vk::PipelineRenderingCreateInfo::default()
             .color_attachment_formats(color_attachment_formats);
@@ -216,7 +212,7 @@ impl<'a> PipelineBuilder<'a> {
             .multisample_state(&self.multisample_state)
             .depth_stencil_state(&self.depth_stencil_state)
             .color_blend_state(&color_blend_state)
-            .viewport_state(&viewport_state)
+            .viewport_state(&self.viewport_state)
             .dynamic_state(&self.dynamic_state)
             .layout(self.pipeline_layout)
             .push_next(&mut pipeline_rendering_info);

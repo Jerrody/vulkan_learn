@@ -128,9 +128,10 @@ impl PipelineManager {
                 .expect("Failed to create pipeline layout!")
         };
 
-        pipeline_builder = pipeline_builder.set_layout(pipeline_layout);
-        let pipeline =
-            pipeline_builder.build(device, &viewports, &scissors, color_attachment_formats);
+        pipeline_builder = pipeline_builder
+            .set_layout(pipeline_layout)
+            .set_viewport_state(&viewports, &scissors);
+        let pipeline = pipeline_builder.build(device, color_attachment_formats);
         let pipeline_object =
             PipelineObject::new(pipeline, pipeline_layout, Rc::new(pipeline_configuration));
         self.pipeline_objects

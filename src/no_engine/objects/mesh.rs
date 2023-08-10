@@ -7,6 +7,17 @@ pub struct Vertex {
 }
 
 pub struct Mesh {
+    pub id: usize,
     pub vertices: Vec<Vertex>,
-    allocated_buffer: crate::no_engine::allocator::buffer::Buffer,
+    pub is_loaded: bool,
+}
+
+impl Mesh {
+    pub fn new(verticies: Vec<Vertex>, id: usize) -> Self {
+        Self {
+            vertices: verticies,
+            id,
+            is_loaded: Default::default(),
+        }
+    }
 }
