@@ -1,20 +1,17 @@
-use std::sync::Arc;
-
 use glam::Vec3;
 
-use crate::no_engine::{
-    allocator::Allocator,
-    objects::mesh::{Mesh, Vertex},
-};
+use crate::no_engine::objects::mesh::{Mesh, Vertex};
 
 pub struct ObjectsLoader;
 
 impl ObjectsLoader {
+    const VERTICIES_PER_TRIANGLE: usize = 3;
+
     pub fn new() -> Self {
         Self
     }
 
-    pub fn load_obj_mesh(&self, path: &str, next_id: usize) -> Mesh {
+    pub fn load_obj_mesh(&self, path: std::path::PathBuf, next_id: usize) -> Mesh {
         let load_options = tobj::LoadOptions {
             single_index: true,
             triangulate: true,
@@ -22,25 +19,28 @@ impl ObjectsLoader {
             ignore_lines: true,
         };
 
-        let (models, _) = tobj::load_obj(path, &load_options).unwrap();
-        let model = models.first().unwrap();
-        let mesh = &model.mesh;
+        if let Ok((models, _)) = tobj::load_obj(path, &load_options) {
+            if let Some(model) = models.first() {
+                let mesh = &model.mesh;
 
-        let vertices = mesh
-            .positions
-            .chunks_exact(3)
-            .zip(mesh.normals.chunks_exact(3))
-            .map(|(position, normal)| {
-                let position = Vec3::from_slice(position);
+                let vertices = mesh
+                    .positions
+                    .chunks(Self::VERTICIES_PER_TRIANGLE)
+                    .zip(mesh.normals.chunks(3))
+                    .map(|(position, normal)| {
+                        let position = Vec3::from_slice(position);
+                        Vertex {
+                            position,
+                            normal: Vec3::from_slice(normal),
+                            color: position,
+                        }
+                    })
+                    .collect();
 
-                Vertex {
-                    position: position,
-                    normal: Vec3::from_slice(normal),
-                    color: position,
-                }
-            })
-            .collect::<Vec<_>>();
+                return Mesh::new(vertices, next_id);
+            }
+        }
 
-        Mesh::new(vertices, next_id)
+        Mesh::new(Vec::new(), next_id)
     }
 }

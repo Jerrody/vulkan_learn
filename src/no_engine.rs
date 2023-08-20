@@ -5,6 +5,7 @@ mod debug_utils;
 mod device;
 mod objects;
 mod pipeline;
+mod register;
 mod rendering_info;
 mod shader;
 mod surface;
@@ -16,7 +17,7 @@ use std::{ffi::CString, mem::ManuallyDrop, rc::Rc};
 use ash::vk;
 use raw_window_handle::HasRawDisplayHandle;
 
-use self::pipeline::PipelineManager;
+use self::{asset::ObjectsQueue, pipeline::PipelineManager};
 
 pub struct NoEngine<'a> {
     entry: ManuallyDrop<ash::Entry>,
@@ -30,6 +31,9 @@ pub struct NoEngine<'a> {
     render_fence: Rc<[vk::Fence]>,
     rendering_info: rendering_info::RenderingInfo<'static>,
     pipeline_manager: PipelineManager,
+    allocator: allocator::Allocator,
+    asset_manager: asset::AssetManager,
+    register: register::Register,
     frame_count: u32,
 }
 
@@ -42,7 +46,7 @@ impl NoEngine<'_> {
 
     #[inline(always)]
     pub fn new(window: &winit::window::Window) -> Self {
-        let entry = unsafe { ash::Entry::load().unwrap() };
+        let entry = ash::Entry::linked();
         let instance = Self::create_instance(window, &entry);
         let debug_handler = debug_utils::DebugHandler::new(&entry, &instance);
 
@@ -113,6 +117,13 @@ impl NoEngine<'_> {
             &formats,
         );
 
+        let allocator = allocator::Allocator::new(
+            &instance,
+            device_manager.physical_device,
+            &device_manager.device,
+        );
+        let asset_manager = asset::AssetManager::new();
+
         Self {
             entry: ManuallyDrop::new(entry),
             instance,
@@ -125,6 +136,9 @@ impl NoEngine<'_> {
             render_fence: Rc::from([render_fence]),
             rendering_info,
             pipeline_manager,
+            allocator,
+            asset_manager,
+            register: register::Register::new(),
             frame_count: Default::default(),
         }
     }
@@ -161,6 +175,31 @@ impl NoEngine<'_> {
             .enabled_extension_names(&required_extensions);
 
         unsafe { entry.create_instance(&instance_info, None).unwrap() }
+    }
+
+    #[inline(always)]
+    pub fn update(&mut self) {
+        self.check_upload_queue();
+    }
+
+    #[inline(always)]
+    pub fn load_file(&mut self, path_buf: std::path::PathBuf) {
+        self.asset_manager.load_file(path_buf);
+    }
+
+    #[inline(always)]
+    fn check_upload_queue(&mut self) {
+        let assets_to_upload = self.asset_manager.get_assets_to_upload();
+        assets_to_upload
+            .iter()
+            .for_each(|asset_to_upload| match asset_to_upload {
+                ObjectsQueue::Mesh(mesh) => {
+                    let mesh = self.asset_manager.get_mesh(*mesh);
+                    let allocated_buffer = self.allocator.upload_mesh(mesh);
+                    self.register
+                        .register_mesh(mesh.mesh_metadata, allocated_buffer);
+                }
+            });
     }
 
     #[inline(always)]

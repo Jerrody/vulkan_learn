@@ -9,7 +9,6 @@ use super::objects::mesh::Mesh;
 
 pub struct Allocator {
     allocator: vk_mem_alloc::Allocator,
-    allocated_buffers: Vec<AllocatedBuffer>,
 }
 
 impl Allocator {
@@ -22,13 +21,11 @@ impl Allocator {
             vk_mem_alloc::create_allocator(instance, physical_device, device, None).unwrap()
         };
 
-        Self {
-            allocator,
-            allocated_buffers: Default::default(),
-        }
+        Self { allocator }
     }
 
-    pub fn upload_mesh(&mut self, mesh: &Mesh) {
+    #[inline(always)]
+    pub fn upload_mesh(&mut self, mesh: &Mesh) -> AllocatedBuffer {
         let verticies = &mesh.vertices;
         let buffer_size = std::mem::size_of_val(&mesh.vertices) as u64;
 
@@ -56,24 +53,20 @@ impl Allocator {
 
         unsafe { vk_mem_alloc::unmap_memory(self.allocator, allocation) }
 
-        let allocator_buffer =
-            buffer::AllocatedBuffer::new(mesh.id, ObjectType::Mesh, buffer, allocation);
+        let allocator_buffer = buffer::AllocatedBuffer::new(
+            mesh.mesh_metadata.id,
+            ObjectType::Mesh,
+            buffer,
+            allocation,
+        );
 
-        self.allocated_buffers.push(allocator_buffer);
+        allocator_buffer
     }
 }
 
 impl Drop for Allocator {
     fn drop(&mut self) {
         unsafe {
-            self.allocated_buffers.iter().for_each(|allocated_buffer| {
-                vk_mem_alloc::destroy_buffer(
-                    self.allocator,
-                    allocated_buffer.buffer,
-                    allocated_buffer.allocation,
-                )
-            });
-
             vk_mem_alloc::destroy_allocator(self.allocator);
         }
     }

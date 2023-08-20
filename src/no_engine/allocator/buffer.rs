@@ -1,4 +1,4 @@
-use ash::vk::{self, Buffer};
+use ash::vk;
 
 pub struct AllocatedBuffer {
     pub id: usize,

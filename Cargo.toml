@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 winit = "0.28.6"
-ash = { git = "https://github.com/ash-rs/ash" }
+ash = { git = "https://github.com/ash-rs/ash", features = ["linked"] }
 ash_window = { package = "ash-window", git = "https://github.com/ash-rs/ash" }
 vk-mem-alloc = { git = "https://github.com/Jerrody/vk-mem-alloc-rs" }
 raw-window-handle = "0.5.2"
@@ -15,6 +15,7 @@ shaderc = { git = "https://github.com/google/shaderc-rs" }
 ahash = { version = "0.8.3", features = ["no-rng"], default-features = false }
 glam = { version = "0.24.1", features = ["fast-math"] }
 tobj = "4.0.0"
+mimalloc = { version = "*", default-features = false }
 
 [profile.release]
 codegen-units = 1

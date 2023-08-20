@@ -1,7 +1,7 @@
 use ash::vk;
 
 pub struct DeviceManager {
-    _physical_device: vk::PhysicalDevice,
+    pub physical_device: vk::PhysicalDevice,
     pub device: ash::Device,
     pub queue_family_index: u32,
     pub surface_format: vk::SurfaceFormatKHR,
@@ -44,10 +44,10 @@ impl DeviceManager {
                                     )
                                     .unwrap()
                         })
-                        else {
-                            return None;
-                        };
-                    
+                    else {
+                        return None;
+                    };
+
                     let required_present_modes = [
                         vk::PresentModeKHR::MAILBOX,
                         vk::PresentModeKHR::FIFO_RELAXED,
@@ -70,8 +70,7 @@ impl DeviceManager {
                         surface_format.color_space == vk::ColorSpaceKHR::SRGB_NONLINEAR
                             && (surface_format.format == vk::Format::B8G8R8A8_SRGB
                                 || surface_format.format == vk::Format::R8G8B8A8_SRGB)
-                    })
-                    else {
+                    }) else {
                         return None;
                     };
 
@@ -149,7 +148,7 @@ impl DeviceManager {
         let graphics_queue = device.get_device_queue(queue_family_index as _, Default::default());
 
         Self {
-            _physical_device: physical_device,
+            physical_device,
             device,
             queue_family_index: queue_family_index as _,
             surface_format,

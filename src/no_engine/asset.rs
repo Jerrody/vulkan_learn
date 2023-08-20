@@ -1,5 +1,4 @@
-use super::{allocator::Allocator, objects::mesh::Mesh};
-use std::sync::Arc;
+use super::objects::mesh::Mesh;
 
 mod loader;
 
@@ -8,46 +7,46 @@ pub enum ObjectsQueue {
 }
 
 pub struct AssetManager {
-    allocator: Allocator,
     loader: loader::ObjectsLoader,
     meshes: Vec<Mesh>,
-    assets_to_load: Vec<ObjectsQueue>,
+    assets_to_upload: Vec<ObjectsQueue>,
 }
 
 impl AssetManager {
-    pub fn new(allocator: Allocator) -> Self {
+    pub fn new() -> Self {
         Self {
-            allocator,
             loader: loader::ObjectsLoader::new(),
             meshes: Default::default(),
-            assets_to_load: Default::default(),
+            assets_to_upload: Default::default(),
         }
     }
 
-    pub fn load_file(&mut self, path: &str) {
-        let file_extension = path.split('.').last().unwrap();
+    pub fn load_file(&mut self, path: std::path::PathBuf) {
+        let file_extension = path
+            .extension()
+            .expect("File extension not found")
+            .to_str()
+            .expect("File extension is not a valid UTF-8 string");
+
         match file_extension {
             "obj" => {
                 let next_id = self.meshes.len();
                 let mesh = self.loader.load_obj_mesh(path, next_id);
 
                 self.meshes.push(mesh);
-                self.assets_to_load.push(ObjectsQueue::Mesh(next_id));
+                self.assets_to_upload.push(ObjectsQueue::Mesh(next_id));
             }
             _ => panic!("File extension not supported"),
         }
     }
 
-    pub fn check_upload_queue(&mut self) {
-        self.assets_to_load
-            .pop()
-            .into_iter()
-            .for_each(|object_to_load| match object_to_load {
-                ObjectsQueue::Mesh(id) => {
-                    let mesh = unsafe { self.meshes.get_unchecked_mut(id) };
-                    self.allocator.upload_mesh(mesh);
-                    mesh.is_loaded = true;
-                }
-            });
+    #[inline(always)]
+    pub fn get_mesh(&self, id: usize) -> &Mesh {
+        unsafe { self.meshes.get_unchecked(id) }
+    }
+
+    #[inline(always)]
+    pub fn get_assets_to_upload(&mut self) -> Vec<ObjectsQueue> {
+        std::mem::take(&mut self.assets_to_upload)
     }
 }

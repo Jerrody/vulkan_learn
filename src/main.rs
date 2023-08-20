@@ -6,6 +6,11 @@ use winit::{
     event_loop,
 };
 
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 fn main() {
     let event_loop = event_loop::EventLoop::new();
     let window = winit::window::WindowBuilder::new()
@@ -24,6 +29,9 @@ fn main() {
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent { window_id, event } if window_id == window.id() => match event {
             WindowEvent::CloseRequested => control_flow.set_exit(),
+            WindowEvent::DroppedFile(path) => {
+                no_engine.load_file(path);
+            }
             WindowEvent::KeyboardInput {
                 input:
                     KeyboardInput {
@@ -51,6 +59,9 @@ fn main() {
                 does_show_fps = !does_show_fps;
                 next_time_to_show = std::time::Instant::now() + std::time::Duration::from_secs(1);
             }
+        }
+        Event::RedrawEventsCleared => {
+            no_engine.update();
         }
         _ => (),
     });
