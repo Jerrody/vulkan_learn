@@ -116,9 +116,10 @@ impl PipelineManager {
 
         let viewports = [vk::Viewport {
             width: extent.width as f32,
-            height: extent.height as f32,
+            height: -(extent.height as f32),
             min_depth: Self::DEFAULT_DEPTH_TEST_RANGE.0,
             max_depth: Self::DEFAULT_DEPTH_TEST_RANGE.1,
+            y: extent.height as f32,
             ..Default::default()
         }];
         let scissors = [vk::Rect2D {
