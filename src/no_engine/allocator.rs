@@ -26,8 +26,8 @@ impl Allocator {
 
     #[inline(always)]
     pub fn upload_mesh(&mut self, mesh: &Mesh) -> AllocatedBuffer {
-        let verticies = &mesh.vertices;
-        let buffer_size = std::mem::size_of_val(&mesh.vertices) as u64;
+        let verticies = mesh.vertices.as_slice();
+        let buffer_size = std::mem::size_of_val(verticies) as u64;
 
         let buffer_create_info = vk::BufferCreateInfo::default()
             .size(buffer_size)
@@ -53,14 +53,13 @@ impl Allocator {
 
         unsafe { vk_mem_alloc::unmap_memory(self.allocator, allocation) }
 
-        let allocator_buffer = buffer::AllocatedBuffer::new(
+        buffer::AllocatedBuffer::new(
             mesh.mesh_metadata.id,
+            std::mem::size_of_val(verticies) as u64,
             ObjectType::Mesh,
             buffer,
             allocation,
-        );
-
-        allocator_buffer
+        )
     }
 }
 

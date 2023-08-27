@@ -2,6 +2,7 @@ pub mod configuration;
 
 mod builder;
 mod object;
+mod vertex_states;
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -9,6 +10,7 @@ use std::rc::Rc;
 use ash::vk;
 
 use self::object::PipelineObject;
+use self::vertex_states::VertexStates;
 
 #[derive(Default)]
 pub struct PipelineManager {
@@ -105,6 +107,12 @@ impl PipelineManager {
 
         pipeline_builder =
             pipeline_builder.set_color_blend_state(false, vk::ColorComponentFlags::RGBA);
+
+        let mesh_vertex_input_description = VertexStates::get_mesh_vertex_description();
+        pipeline_builder = pipeline_builder.set_vertex_input_state(
+            &mesh_vertex_input_description.binding_descriptions,
+            &mesh_vertex_input_description.attribute_descriptions,
+        );
 
         let viewports = [vk::Viewport {
             width: extent.width as f32,

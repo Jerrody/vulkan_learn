@@ -9,12 +9,12 @@ pub struct Vertex {
 #[derive(Clone, Copy)]
 pub struct MeshMetadata {
     pub id: usize,
-    pub vertices_count: usize,
+    pub vertices_count: u32,
     pub indices_count: usize,
 }
 
 impl MeshMetadata {
-    pub fn new(id: usize, vertices_count: usize, indices_count: usize) -> Self {
+    pub fn new(id: usize, vertices_count: u32, indices_count: usize) -> Self {
         Self {
             id,
             vertices_count,
@@ -32,7 +32,7 @@ pub struct Mesh {
 impl Mesh {
     pub fn new(verticies: Vec<Vertex>, id: usize) -> Self {
         Self {
-            mesh_metadata: MeshMetadata::new(id, verticies.len(), Default::default()),
+            mesh_metadata: MeshMetadata::new(id, verticies.len() as u32, Default::default()),
             vertices: verticies,
             is_uploaded: Default::default(),
         }

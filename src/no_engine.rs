@@ -184,6 +184,7 @@ impl NoEngine<'_> {
 
     #[inline(always)]
     pub fn load_file(&mut self, path_buf: std::path::PathBuf) {
+        println!("LOAD");
         self.asset_manager.load_file(path_buf);
     }
 
@@ -340,7 +341,23 @@ impl NoEngine<'_> {
                 vk::PipelineBindPoint::GRAPHICS,
                 self.pipeline_manager.current_pipeline_object.pipeline,
             );
-            device.cmd_draw(command_buffer, 3, 1, Default::default(), Default::default());
+
+            self.register.get_meshes().iter().for_each(|mesh| {
+                device.cmd_bind_vertex_buffers(
+                    command_buffer,
+                    Default::default(),
+                    self.register.get_buffers(),
+                    self.register.get_offsets(),
+                );
+
+                device.cmd_draw(
+                    command_buffer,
+                    mesh.mesh_metadata.vertices_count,
+                    1,
+                    Default::default(),
+                    Default::default(),
+                )
+            });
 
             device.cmd_end_rendering(command_buffer);
         }

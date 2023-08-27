@@ -1,3 +1,5 @@
+#![feature(offset_of)]
+
 mod fps_counter;
 mod no_engine;
 
