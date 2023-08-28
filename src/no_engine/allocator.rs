@@ -1,8 +1,13 @@
 pub mod buffer;
+pub mod image;
+
+pub use self::buffer::*;
+pub use self::image::*;
 
 use self::buffer::AllocatedBuffer;
 
 use super::objects::ObjectType;
+use super::Id;
 use ash::vk;
 
 use super::objects::mesh::Mesh;
@@ -60,6 +65,42 @@ impl Allocator {
             buffer,
             allocation,
         )
+    }
+
+    #[inline(always)]
+    pub fn allocate_image(
+        &self,
+        format: vk::Format,
+        extent: vk::Extent3D,
+        image_type: vk::ImageType,
+        array_layers: u32,
+        mip_map_levels: u32,
+        samples: vk::SampleCountFlags,
+        usage_flags: vk::ImageUsageFlags,
+    ) -> AllocatedImage {
+        let image_create_info = vk::ImageCreateInfo::default()
+            .array_layers(array_layers)
+            .mip_levels(mip_map_levels)
+            .image_type(image_type)
+            .extent(extent)
+            .format(format)
+            .samples(samples)
+            .tiling(vk::ImageTiling::OPTIMAL)
+            .usage(usage_flags);
+
+        let allocation_info = vk_mem_alloc::AllocationCreateInfo {
+            usage: vk_mem_alloc::MemoryUsage::AUTO,
+            flags: vk_mem_alloc::AllocationCreateFlags::HOST_ACCESS_RANDOM,
+            required_flags: vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            ..Default::default()
+        };
+
+        let (image, allocation, _) = unsafe {
+            vk_mem_alloc::create_image(self.allocator, &image_create_info, &allocation_info)
+                .unwrap()
+        };
+
+        AllocatedImage::new(Id::new(), image, allocation)
     }
 }
 

@@ -1,7 +1,9 @@
 use ash::vk;
 
+use crate::no_engine::Id;
+
 pub struct AllocatedBuffer {
-    pub id: usize,
+    pub id: Id,
     pub offset: u64,
     pub size: u64,
     pub object_type: super::ObjectType,
@@ -11,7 +13,7 @@ pub struct AllocatedBuffer {
 
 impl AllocatedBuffer {
     pub fn new(
-        id: usize,
+        id: Id,
         size: u64,
         object_type: super::ObjectType,
         buffer: vk::Buffer,

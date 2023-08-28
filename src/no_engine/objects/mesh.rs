@@ -1,5 +1,7 @@
 use glam::Vec3;
 
+use crate::no_engine::Id;
+
 pub struct Vertex {
     pub position: Vec3,
     pub normal: Vec3,
@@ -8,13 +10,13 @@ pub struct Vertex {
 
 #[derive(Clone, Copy)]
 pub struct MeshMetadata {
-    pub id: usize,
+    pub id: Id,
     pub vertices_count: u32,
     pub indices_count: usize,
 }
 
 impl MeshMetadata {
-    pub fn new(id: usize, vertices_count: u32, indices_count: usize) -> Self {
+    pub fn new(id: Id, vertices_count: u32, indices_count: usize) -> Self {
         Self {
             id,
             vertices_count,
@@ -30,7 +32,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(verticies: Vec<Vertex>, id: usize) -> Self {
+    pub fn new(verticies: Vec<Vertex>, id: Id) -> Self {
         Self {
             mesh_metadata: MeshMetadata::new(id, verticies.len() as u32, Default::default()),
             vertices: verticies,

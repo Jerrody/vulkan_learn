@@ -1,6 +1,9 @@
 use glam::Vec3;
 
-use crate::no_engine::objects::mesh::{Mesh, Vertex};
+use crate::no_engine::{
+    id::Id,
+    objects::mesh::{Mesh, Vertex},
+};
 
 pub struct ObjectsLoader;
 
@@ -11,7 +14,7 @@ impl ObjectsLoader {
         Self
     }
 
-    pub fn load_obj_mesh(&self, path: std::path::PathBuf, next_id: usize) -> Mesh {
+    pub fn load_obj_mesh(&self, path: std::path::PathBuf, id: Id) -> Option<Mesh> {
         let load_options = tobj::LoadOptions {
             single_index: true,
             triangulate: true,
@@ -37,10 +40,10 @@ impl ObjectsLoader {
                     })
                     .collect();
 
-                return Mesh::new(vertices, next_id);
+                return Some(Mesh::new(vertices, id));
             }
         }
 
-        Mesh::new(Vec::new(), next_id)
+        None
     }
 }

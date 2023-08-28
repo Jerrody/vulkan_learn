@@ -2,21 +2,18 @@ use std::sync::Arc;
 
 use ash::vk;
 
+use super::Id;
+
 pub struct Shader {
-    pub id: u64,
+    pub id: Id,
     pub shader_module: vk::ShaderModule,
     pub shader_stage: vk::ShaderStageFlags,
 }
 
 impl Shader {
     pub fn new(shader_module: vk::ShaderModule, shader_stage: vk::ShaderStageFlags) -> Self {
-        let shader_module_hash = crate::no_engine::utils::hash(&shader_module);
-        let shader_stage_hash = crate::no_engine::utils::hash(&shader_stage);
-
-        let id = shader_module_hash ^ shader_stage_hash;
-
         Self {
-            id,
+            id: Id::new(),
             shader_module,
             shader_stage,
         }
@@ -32,7 +29,9 @@ pub struct ShaderManager<'a> {
 
 impl ShaderManager<'_> {
     pub const DEFAULT_SHADER_EXTENSION: &'static str = ".glsl";
-    pub const DEFAULT_ENTRY_POINT_RAW: *const std::os::raw::c_char = concat!("main", "\0").as_ptr().cast::<::std::os::raw::c_char>();
+    pub const DEFAULT_ENTRY_POINT_RAW: *const std::os::raw::c_char = concat!("main", "\0")
+        .as_ptr()
+        .cast::<::std::os::raw::c_char>();
     const DEFAULT_ENTRY_POINT: &'static str = "main";
 
     pub fn new(device: &ash::Device) -> Self {

@@ -1,9 +1,9 @@
-use super::objects::mesh::Mesh;
+use super::{objects::mesh::Mesh, Id};
 
 mod loader;
 
 pub enum ObjectsQueue {
-    Mesh(usize),
+    Mesh(Id),
 }
 
 pub struct AssetManager {
@@ -30,19 +30,20 @@ impl AssetManager {
 
         match file_extension {
             "obj" => {
-                let next_id = self.meshes.len();
-                let mesh = self.loader.load_obj_mesh(path, next_id);
-
-                self.meshes.push(mesh);
-                self.assets_to_upload.push(ObjectsQueue::Mesh(next_id));
+                let id = Id::new();
+                let mesh = self.loader.load_obj_mesh(path, id);
+                if let Some(mesh) = mesh {
+                    self.meshes.push(mesh);
+                    self.assets_to_upload.push(ObjectsQueue::Mesh(id));
+                }
             }
             _ => panic!("File extension not supported"),
         }
     }
 
     #[inline(always)]
-    pub fn get_mesh(&self, id: usize) -> &Mesh {
-        unsafe { self.meshes.get_unchecked(id) }
+    pub fn get_mesh(&self, id: Id) -> &Mesh {
+        unsafe { self.meshes.get_unchecked::<usize>(id.into()) }
     }
 
     #[inline(always)]

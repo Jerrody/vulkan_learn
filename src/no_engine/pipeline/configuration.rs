@@ -1,10 +1,10 @@
-use crate::no_engine::shader;
+use crate::no_engine::{shader, Id};
 
 pub mod anti_alising;
 
 #[derive(Default, Hash)]
 pub struct PipelineConfiguration {
-    pub shaders_id: Vec<u64>,
+    pub shaders_id: Vec<Id>,
     pub anti_alising: anti_alising::AntiAliasing,
 }
 

@@ -2,6 +2,13 @@ use std::rc::Rc;
 
 use ash::vk;
 
+use super::allocator;
+
+pub struct Depth {
+    image_view: vk::ImageView,
+    allocated_image: allocator::AllocatedImage,
+}
+
 pub struct RenderingInfo<'a> {
     pub command_buffer_info: vk::CommandBufferBeginInfo<'a>,
     pub color_attachments: arrayvec::ArrayVec<vk::RenderingAttachmentInfoKHR<'a>, 1>,

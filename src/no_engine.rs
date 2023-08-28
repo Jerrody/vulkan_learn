@@ -3,6 +3,7 @@ mod asset;
 mod command;
 mod debug_utils;
 mod device;
+mod id;
 mod objects;
 mod pipeline;
 mod register;
@@ -11,6 +12,8 @@ mod shader;
 mod surface;
 mod swapchain;
 mod utils;
+
+pub use id::*;
 
 use std::{ffi::CString, mem::ManuallyDrop, rc::Rc};
 
