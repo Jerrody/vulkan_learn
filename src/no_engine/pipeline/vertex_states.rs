@@ -24,12 +24,12 @@ impl VertexStates {
             .stride(std::mem::size_of::<crate::no_engine::objects::mesh::Vertex>() as u32);
 
         let mut vertex_input_attributes = Vec::new();
-        let mut location = 0;
+        let mut location = Default::default();
         vertex_input_attributes.push(
             vk::VertexInputAttributeDescription::default()
                 .binding(vertex_input_binding.binding)
                 .location(location)
-                .format(vk::Format::R32G32B32A32_SFLOAT)
+                .format(vk::Format::R32G32B32_SFLOAT)
                 .offset(std::mem::offset_of!(Vertex, position) as u32),
         );
 
@@ -39,7 +39,7 @@ impl VertexStates {
             vk::VertexInputAttributeDescription::default()
                 .binding(vertex_input_binding.binding)
                 .location(location)
-                .format(vk::Format::R32G32B32A32_SFLOAT)
+                .format(vk::Format::R32G32B32_SFLOAT)
                 .offset(std::mem::offset_of!(Vertex, normal) as u32),
         );
 
@@ -49,7 +49,7 @@ impl VertexStates {
             vk::VertexInputAttributeDescription::default()
                 .binding(vertex_input_binding.binding)
                 .location(location)
-                .format(vk::Format::R32G32B32A32_SFLOAT)
+                .format(vk::Format::R32G32B32_SFLOAT)
                 .offset(std::mem::offset_of!(Vertex, color) as u32),
         );
 

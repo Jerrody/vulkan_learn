@@ -2,16 +2,10 @@ use std::rc::Rc;
 
 use ash::vk;
 
-use super::allocator;
-
-pub struct Depth {
-    image_view: vk::ImageView,
-    allocated_image: allocator::AllocatedImage,
-}
-
 pub struct RenderingInfo<'a> {
     pub command_buffer_info: vk::CommandBufferBeginInfo<'a>,
     pub color_attachments: arrayvec::ArrayVec<vk::RenderingAttachmentInfoKHR<'a>, 1>,
+    pub depth_attachment: vk::RenderingAttachmentInfoKHR<'a>,
     pub clear_values: vk::ClearValue,
     pub present_semaphores: Rc<[vk::Semaphore]>,
     pub render_semaphores: Rc<[vk::Semaphore]>,
@@ -32,6 +26,17 @@ impl RenderingInfo<'_> {
             .load_op(vk::AttachmentLoadOp::CLEAR)
             .store_op(vk::AttachmentStoreOp::STORE)
             .image_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)];
+        let depth_attachment = vk::RenderingAttachmentInfo::default()
+            .image_view(swapchain_manager.depth.image_view)
+            .load_op(vk::AttachmentLoadOp::CLEAR)
+            .store_op(vk::AttachmentStoreOp::STORE)
+            .image_layout(vk::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL)
+            .clear_value(vk::ClearValue {
+                depth_stencil: vk::ClearDepthStencilValue {
+                    depth: 1.0,
+                    stencil: 0,
+                },
+            });
 
         let clear_values = vk::ClearValue {
             color: vk::ClearColorValue {
@@ -47,6 +52,7 @@ impl RenderingInfo<'_> {
         Self {
             command_buffer_info,
             color_attachments: color_attachments.into_iter().collect(),
+            depth_attachment,
             clear_values,
             present_semaphores: wait_semaphores,
             render_semaphores: signal_semaphores,

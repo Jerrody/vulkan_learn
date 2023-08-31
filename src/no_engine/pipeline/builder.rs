@@ -134,6 +134,7 @@ impl<'a> PipelineBuilder<'a> {
         self
     }
 
+    #[inline(always)]
     pub fn set_depth_stencil_state(
         mut self,
         depth_test_enable: bool,
@@ -195,13 +196,15 @@ impl<'a> PipelineBuilder<'a> {
         self,
         device: &ash::Device,
         color_attachment_formats: &[vk::Format],
+        depth_attachment_format: vk::Format,
     ) -> vk::Pipeline {
         let color_blend_state = vk::PipelineColorBlendStateCreateInfo::default()
             .attachments(&self.color_blend_attachment_states)
             .logic_op(vk::LogicOp::COPY);
 
         let mut pipeline_rendering_info = vk::PipelineRenderingCreateInfo::default()
-            .color_attachment_formats(color_attachment_formats);
+            .color_attachment_formats(color_attachment_formats)
+            .depth_attachment_format(depth_attachment_format);
 
         let pipeline_info = vk::GraphicsPipelineCreateInfo::default()
             .stages(&self.shader_stages)

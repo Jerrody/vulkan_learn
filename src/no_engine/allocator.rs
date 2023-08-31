@@ -12,6 +12,7 @@ use ash::vk;
 
 use super::objects::mesh::Mesh;
 
+#[derive(Clone, Copy)]
 pub struct Allocator {
     allocator: vk_mem_alloc::Allocator,
 }
@@ -77,6 +78,8 @@ impl Allocator {
         mip_map_levels: u32,
         samples: vk::SampleCountFlags,
         usage_flags: vk::ImageUsageFlags,
+        flags: vk_mem_alloc::AllocationCreateFlags,
+        required_flags: vk::MemoryPropertyFlags,
     ) -> AllocatedImage {
         let image_create_info = vk::ImageCreateInfo::default()
             .array_layers(array_layers)
@@ -90,8 +93,8 @@ impl Allocator {
 
         let allocation_info = vk_mem_alloc::AllocationCreateInfo {
             usage: vk_mem_alloc::MemoryUsage::AUTO,
-            flags: vk_mem_alloc::AllocationCreateFlags::HOST_ACCESS_RANDOM,
-            required_flags: vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            flags,
+            required_flags,
             ..Default::default()
         };
 
@@ -100,12 +103,11 @@ impl Allocator {
                 .unwrap()
         };
 
-        AllocatedImage::new(Id::new(), image, allocation)
+        AllocatedImage::new(Id::new(), format, image, allocation)
     }
-}
 
-impl Drop for Allocator {
-    fn drop(&mut self) {
+    #[inline(always)]
+    pub fn destroy_allocator(&mut self) {
         unsafe {
             vk_mem_alloc::destroy_allocator(self.allocator);
         }

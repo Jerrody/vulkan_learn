@@ -63,6 +63,12 @@ impl NoEngine<'_> {
             )
         };
 
+        let allocator = allocator::Allocator::new(
+            &instance,
+            device_manager.physical_device,
+            &device_manager.device,
+        );
+
         let window_inner_size = window.inner_size();
         let extent = vk::Extent2D {
             width: window_inner_size.width,
@@ -74,6 +80,7 @@ impl NoEngine<'_> {
             &device_manager,
             extent,
             surface_manager.surface,
+            allocator,
         );
 
         let fence_info = vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED);
@@ -118,13 +125,9 @@ impl NoEngine<'_> {
             pipeline_configuration,
             swapchain_manager.extent,
             &formats,
+            swapchain_manager.depth.allocated_image.format,
         );
 
-        let allocator = allocator::Allocator::new(
-            &instance,
-            device_manager.physical_device,
-            &device_manager.device,
-        );
         let asset_manager = asset::AssetManager::new();
 
         Self {
@@ -187,7 +190,6 @@ impl NoEngine<'_> {
 
     #[inline(always)]
     pub fn load_file(&mut self, path_buf: std::path::PathBuf) {
-        println!("LOAD");
         self.asset_manager.load_file(path_buf);
     }
 
@@ -286,6 +288,27 @@ impl NoEngine<'_> {
             },
             ..Default::default()
         };
+        let depth_barrier = vk::ImageMemoryBarrier2 {
+            src_stage_mask: vk::PipelineStageFlags2::EARLY_FRAGMENT_TESTS
+                | vk::PipelineStageFlags2::LATE_FRAGMENT_TESTS,
+            src_access_mask: vk::AccessFlags2KHR::NONE_KHR,
+            dst_stage_mask: vk::PipelineStageFlags2::EARLY_FRAGMENT_TESTS
+                | vk::PipelineStageFlags2::LATE_FRAGMENT_TESTS,
+            dst_access_mask: vk::AccessFlags2KHR::DEPTH_STENCIL_ATTACHMENT_WRITE,
+            old_layout: vk::ImageLayout::UNDEFINED,
+            new_layout: vk::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL,
+            src_queue_family_index: queue_family_index,
+            dst_queue_family_index: queue_family_index,
+            image: self.swapchain_manager.depth.allocated_image.image,
+            subresource_range: vk::ImageSubresourceRange {
+                aspect_mask: vk::ImageAspectFlags::DEPTH,
+                level_count: 1,
+                layer_count: 1,
+                base_array_layer: Default::default(),
+                base_mip_level: Default::default(),
+            },
+            ..Default::default()
+        };
         let output_barrier = vk::ImageMemoryBarrier2 {
             src_stage_mask: vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT_KHR,
             src_access_mask: vk::AccessFlags2KHR::COLOR_ATTACHMENT_WRITE_KHR,
@@ -305,7 +328,7 @@ impl NoEngine<'_> {
             },
             ..Default::default()
         };
-        let image_barriers = [color_barrier, output_barrier];
+        let image_barriers = [color_barrier, depth_barrier, output_barrier];
         let dependency_info =
             vk::DependencyInfoKHR::default().image_memory_barriers(&image_barriers);
         unsafe { device.cmd_pipeline_barrier2(command_buffer, &dependency_info) };
@@ -330,6 +353,7 @@ impl NoEngine<'_> {
 
         let rendering_info = vk::RenderingInfoKHR::default()
             .color_attachments(&self.rendering_info.color_attachments)
+            .depth_attachment(&self.rendering_info.depth_attachment)
             .render_area(vk::Rect2D {
                 offset: Default::default(),
                 extent: self.swapchain_manager.extent,
