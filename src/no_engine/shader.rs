@@ -141,9 +141,8 @@ impl ShaderManager<'_> {
         self.compiled_shaders.insert(Id::new(), compiled_shader);
     }
 
-    #[inline(always)]
     pub fn upload_required_shaders(&mut self) {
-        let shader_infos = self
+        let shader_infos: Vec<_> = self
             .shader_queue_to_load
             .drain(..)
             .map(|compiled_shader_id| {
@@ -152,13 +151,35 @@ impl ShaderManager<'_> {
                     .get(&compiled_shader_id)
                     .expect("Shader not found");
 
+                let shader_object = ShaderObject {
+                    id: Id::new(),
+                    stage: compiled_shader.stage,
+                    shader: Default::default(),
+                };
+                self.uploaded_shaders.push(shader_object);
+
                 vk::ShaderCreateInfoEXT::default()
                     .flags(vk::ShaderCreateFlagsEXT::LINK_STAGE)
                     .stage(compiled_shader.stage)
                     .next_stage(compiled_shader.next_stage)
                     .name(Self::DEFAULT_ENTRY_POINT_RAW)
-                    .code(&compiled_shader.raw);
-            });
+                    .code(&compiled_shader.raw)
+            })
+            .collect();
+
+        let uploaded_shaders = unsafe {
+            self.shader_object
+                .create_shaders(&shader_infos, None)
+                .unwrap()
+        };
+
+        let start_idx = self.uploaded_shaders.len() - uploaded_shaders.len();
+        for (shader_object, uploaded_shader) in self.uploaded_shaders[start_idx..]
+            .iter_mut()
+            .zip(uploaded_shaders)
+        {
+            shader_object.shader = uploaded_shader;
+        }
     }
 
     #[inline(always)]
