@@ -20,6 +20,9 @@ impl DeviceManager {
         let required_extensions = [
             ash::extensions::khr::Swapchain::NAME.as_ptr(),
             ash::extensions::khr::DynamicRendering::NAME.as_ptr(),
+            ash::extensions::ext::ShaderObject::NAME.as_ptr(),
+            ash::extensions::ext::ExtendedDynamicState::NAME.as_ptr(),
+            ash::extensions::ext::VertexInputDynamicState::NAME.as_ptr(),
         ];
 
         let (physical_device, queue_family_index, device_properties, present_mode, surface_format) =
