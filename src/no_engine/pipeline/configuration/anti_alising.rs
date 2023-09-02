@@ -50,6 +50,8 @@ pub struct AntiAliasing {
 
 impl AntiAliasing {
     pub fn new(anti_alising_type: AntiAliasingType) -> Self {
-        Self { anti_aliasing_type: anti_alising_type }
+        Self {
+            anti_aliasing_type: anti_alising_type,
+        }
     }
 }

@@ -12,11 +12,11 @@ pub struct Vertex {
 pub struct MeshMetadata {
     pub id: Id,
     pub vertices_count: u32,
-    pub indices_count: usize,
+    pub indices_count: u32,
 }
 
 impl MeshMetadata {
-    pub fn new(id: Id, vertices_count: u32, indices_count: usize) -> Self {
+    pub fn new(id: Id, vertices_count: u32, indices_count: u32) -> Self {
         Self {
             id,
             vertices_count,
@@ -26,17 +26,20 @@ impl MeshMetadata {
 }
 
 pub struct Mesh {
-    pub mesh_metadata: MeshMetadata,
+    pub metadata: MeshMetadata,
     pub vertices: Vec<Vertex>,
+    pub indices: Vec<u32>,
     pub is_uploaded: bool,
 }
 
 impl Mesh {
-    pub fn new(verticies: Vec<Vertex>, id: Id) -> Self {
+    pub fn new(id: Id, vertices: Vec<Vertex>, indices: Vec<u32>) -> Self {
+        let metadata = MeshMetadata::new(id, vertices.len() as u32, indices.len() as u32);
         Self {
-            mesh_metadata: MeshMetadata::new(id, verticies.len() as u32, Default::default()),
-            vertices: verticies,
-            is_uploaded: Default::default(),
+            metadata,
+            vertices,
+            indices,
+            is_uploaded: false,
         }
     }
 }

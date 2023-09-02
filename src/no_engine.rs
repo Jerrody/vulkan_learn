@@ -201,9 +201,8 @@ impl NoEngine<'_> {
             .for_each(|asset_to_upload| match asset_to_upload {
                 ObjectsQueue::Mesh(mesh) => {
                     let mesh = self.asset_manager.get_mesh(*mesh);
-                    let allocated_buffer = self.allocator.upload_mesh(mesh);
-                    self.register
-                        .register_mesh(mesh.mesh_metadata, allocated_buffer);
+                    let allocated_mesh = self.allocator.upload_mesh(mesh);
+                    self.register.register_mesh(allocated_mesh);
                 }
             });
     }
@@ -376,14 +375,22 @@ impl NoEngine<'_> {
                     self.register.get_buffers(),
                     self.register.get_offsets(),
                 );
-
-                device.cmd_draw(
+                device.cmd_bind_index_buffer(
                     command_buffer,
-                    mesh.mesh_metadata.vertices_count,
+                    mesh.index_buffer.buffer,
+                    Default::default(),
+                    vk::IndexType::UINT32,
+                );
+
+                let metadata = mesh.metadata;
+                device.cmd_draw_indexed(
+                    command_buffer,
+                    metadata.indices_count,
                     1,
                     Default::default(),
                     Default::default(),
-                )
+                    Default::default(),
+                );
             });
 
             device.cmd_end_rendering(command_buffer);

@@ -32,15 +32,16 @@ impl ObjectsLoader {
                     .zip(mesh.normals.chunks(3))
                     .map(|(position, normal)| {
                         let position = Vec3::from_slice(position);
+                        let normal = Vec3::from_slice(normal);
                         Vertex {
                             position,
-                            normal: Vec3::from_slice(normal),
-                            color: position,
+                            normal,
+                            color: normal,
                         }
                     })
                     .collect();
 
-                return Some(Mesh::new(vertices, id));
+                return Some(Mesh::new(id, vertices, mesh.indices.clone()));
             }
         }
 

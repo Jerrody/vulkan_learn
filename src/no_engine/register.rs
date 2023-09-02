@@ -1,22 +1,6 @@
 use ash::vk;
 
-use crate::no_engine::objects::mesh::MeshMetadata;
-
-use super::allocator::buffer::AllocatedBuffer;
-
-pub struct AllocatedMesh {
-    pub mesh_metadata: MeshMetadata,
-    pub allocated_buffer: AllocatedBuffer,
-}
-
-impl AllocatedMesh {
-    pub fn new(mesh_metadata: MeshMetadata, allocated_buffer: AllocatedBuffer) -> Self {
-        Self {
-            mesh_metadata,
-            allocated_buffer,
-        }
-    }
-}
+use super::allocator::mesh::AllocatedMesh;
 
 // TODO: Maybe move to the future scene manager?
 #[derive(Default)]
@@ -32,13 +16,8 @@ impl Register {
     }
 
     #[inline(always)]
-    pub fn register_mesh(
-        &mut self,
-        mesh_metadata: MeshMetadata,
-        allocated_buffer: AllocatedBuffer,
-    ) {
-        self.allocated_meshes
-            .push(AllocatedMesh::new(mesh_metadata, allocated_buffer));
+    pub fn register_mesh(&mut self, allocated_mesh: AllocatedMesh) {
+        self.allocated_meshes.push(allocated_mesh);
 
         self.accumulate_data();
     }
@@ -63,13 +42,13 @@ impl Register {
         self.buffers = self
             .get_meshes()
             .iter()
-            .map(|mesh| mesh.allocated_buffer.buffer)
+            .map(|mesh| mesh.vertex_buffer.buffer)
             .collect();
 
         self.offsets = self
             .get_meshes()
             .iter()
-            .map(|mesh| mesh.allocated_buffer.offset)
+            .map(|mesh| mesh.vertex_buffer.offset)
             .collect();
     }
 }
