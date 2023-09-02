@@ -1,4 +1,6 @@
 #![feature(offset_of)]
+#![feature(const_cstr_from_ptr)]
+#![deny(unsafe_op_in_unsafe_fn)]
 
 mod fps_counter;
 mod no_engine;

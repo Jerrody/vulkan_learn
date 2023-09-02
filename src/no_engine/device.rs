@@ -22,10 +22,9 @@ impl DeviceManager {
             ash::extensions::khr::DynamicRendering::NAME.as_ptr(),
             ash::extensions::ext::ShaderObject::NAME.as_ptr(),
             ash::extensions::ext::ExtendedDynamicState::NAME.as_ptr(),
-            ash::extensions::ext::VertexInputDynamicState::NAME.as_ptr(),
         ];
 
-        let (physical_device, queue_family_index, device_properties, present_mode, surface_format) =
+        let (physical_device, queue_family_index, device_properties, present_mode, surface_format) = unsafe {
             instance
                 .enumerate_physical_devices()
                 .unwrap()
@@ -118,12 +117,12 @@ impl DeviceManager {
                         _ => Default::default(),
                     },
                 )
-                .unwrap();
+                .unwrap()
+        };
 
-        println!(
-            "Found suitable device: {:?}",
+        println!("Found suitable device: {:?}", unsafe {
             std::ffi::CStr::from_ptr(device_properties.device_name.as_ptr())
-        );
+        });
 
         let device_queue_info = [vk::DeviceQueueCreateInfo::default()
             .queue_family_index(queue_family_index as _)
@@ -131,24 +130,31 @@ impl DeviceManager {
 
         let physical_device_features = vk::PhysicalDeviceFeatures::default();
 
+        let mut shader_object =
+            ash::vk::PhysicalDeviceShaderObjectFeaturesEXT::default().shader_object(true);
+
         let mut physical_device_vulkan_13_features = vk::PhysicalDeviceVulkan13Features::default()
             .dynamic_rendering(true)
             .synchronization2(true);
 
         let mut physical_device_features = vk::PhysicalDeviceFeatures2::default()
             .features(physical_device_features)
-            .push_next(&mut physical_device_vulkan_13_features);
+            .push_next(&mut physical_device_vulkan_13_features)
+            .push_next(&mut shader_object);
 
         let device_info = vk::DeviceCreateInfo::default()
             .queue_create_infos(&device_queue_info)
             .enabled_extension_names(&required_extensions)
             .push_next(&mut physical_device_features);
 
-        let device = instance
-            .create_device(physical_device, &device_info, None)
-            .unwrap();
+        let device = unsafe {
+            instance
+                .create_device(physical_device, &device_info, None)
+                .unwrap()
+        };
 
-        let graphics_queue = device.get_device_queue(queue_family_index as _, Default::default());
+        let graphics_queue =
+            unsafe { device.get_device_queue(queue_family_index as _, Default::default()) };
 
         Self {
             physical_device,

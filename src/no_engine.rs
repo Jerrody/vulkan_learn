@@ -5,7 +5,6 @@ mod debug_utils;
 mod device;
 mod id;
 mod objects;
-mod pipeline;
 mod register;
 mod rendering_info;
 mod shader;
@@ -20,7 +19,7 @@ use std::{ffi::CString, mem::ManuallyDrop, rc::Rc};
 use ash::vk;
 use raw_window_handle::HasRawDisplayHandle;
 
-use self::{asset::ObjectsQueue, pipeline::PipelineManager};
+use self::asset::ObjectsQueue;
 
 pub struct NoEngine<'a> {
     entry: ManuallyDrop<ash::Entry>,
@@ -33,7 +32,6 @@ pub struct NoEngine<'a> {
     command_manager: command::CommandManager,
     render_fence: Rc<[vk::Fence]>,
     rendering_info: rendering_info::RenderingInfo<'static>,
-    pipeline_manager: PipelineManager,
     allocator: allocator::Allocator,
     asset_manager: asset::AssetManager,
     register: register::Register,
@@ -90,7 +88,7 @@ impl NoEngine<'_> {
                 .create_fence(&fence_info, None)
                 .unwrap()
         };
-        let mut shader_manager = shader::ShaderManager::new(&device_manager.device);
+        let mut shader_manager = shader::ShaderManager::new(&instance, &device_manager.device);
         shader_manager.compile_shaders_from_folder(r"shaders/unlit");
 
         let semaphore_info = vk::SemaphoreCreateInfo::default();
@@ -114,20 +112,6 @@ impl NoEngine<'_> {
             &[vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT],
         );
 
-        let mut pipeline_manager = pipeline::PipelineManager::new();
-        let mut pipeline_configuration = pipeline::configuration::PipelineConfiguration::new();
-        pipeline_configuration.add_shaders(shader_manager.get_shaders());
-
-        let formats = [device_manager.surface_format.format];
-        pipeline_manager.require_pipeline(
-            &device_manager.device,
-            &shader_manager,
-            pipeline_configuration,
-            swapchain_manager.extent,
-            &formats,
-            swapchain_manager.depth.allocated_image.format,
-        );
-
         let asset_manager = asset::AssetManager::new();
 
         Self {
@@ -141,7 +125,6 @@ impl NoEngine<'_> {
             command_manager,
             render_fence: Rc::from([render_fence]),
             rendering_info,
-            pipeline_manager,
             allocator,
             asset_manager,
             register: register::Register::new(),
@@ -362,12 +345,6 @@ impl NoEngine<'_> {
         unsafe {
             device.cmd_begin_rendering(command_buffer, &rendering_info);
 
-            device.cmd_bind_pipeline(
-                command_buffer,
-                vk::PipelineBindPoint::GRAPHICS,
-                self.pipeline_manager.current_pipeline_object.pipeline,
-            );
-
             self.register.get_meshes().iter().for_each(|mesh| {
                 device.cmd_bind_vertex_buffers(
                     command_buffer,
@@ -440,8 +417,6 @@ impl Drop for NoEngine<'_> {
         unsafe {
             let device = &self.device_manager.device;
             device.device_wait_idle().unwrap();
-
-            self.pipeline_manager.clear_pipeline_objects(device);
 
             self.shader_manager.clear_shader_modules();
             device.destroy_command_pool(self.command_manager.command_pool, None);

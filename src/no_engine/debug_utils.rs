@@ -19,7 +19,7 @@ unsafe extern "system" fn debug_callback(
         vk::DebugUtilsMessageTypeFlagsEXT::VALIDATION => "VALIDATION",
         _ => "UNKNOWN",
     };
-    let message = std::ffi::CStr::from_ptr((*p_callback_data).p_message);
+    let message = unsafe { std::ffi::CStr::from_ptr((*p_callback_data).p_message) };
     println!("[DEBUG] [{message_severity}] [{message_type}] {message:?}");
     vk::FALSE
 }

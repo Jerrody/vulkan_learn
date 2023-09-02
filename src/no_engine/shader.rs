@@ -1,40 +1,53 @@
-use std::sync::Arc;
+use std::{collections::HashMap, ffi::CStr};
 
 use ash::vk;
 
 use super::Id;
 
-pub struct Shader {
-    pub id: Id,
-    pub shader_module: vk::ShaderModule,
-    pub shader_stage: vk::ShaderStageFlags,
+pub struct RawShader {
+    pub stage: vk::ShaderStageFlags,
+    pub next_stage: vk::ShaderStageFlags,
+    pub raw: Vec<u8>,
 }
 
-impl Shader {
-    pub fn new(shader_module: vk::ShaderModule, shader_stage: vk::ShaderStageFlags) -> Self {
+impl RawShader {
+    pub fn new(
+        shader_stage: vk::ShaderStageFlags,
+        next_shader_stage: vk::ShaderStageFlags,
+        raw: Vec<u8>,
+    ) -> Self {
         Self {
-            id: Id::new(),
-            shader_module,
-            shader_stage,
+            stage: shader_stage,
+            next_stage: next_shader_stage,
+            raw,
         }
     }
 }
 
+pub struct ShaderObject {
+    id: Id,
+    stage: vk::ShaderStageFlags,
+    shader: vk::ShaderEXT,
+}
+
 pub struct ShaderManager<'a> {
-    device: Arc<ash::Device>,
-    compiler: shaderc::Compiler,
+    shader_object: ash::extensions::ext::ShaderObject,
     compiler_options: shaderc::CompileOptions<'a>,
-    shader_modules: Vec<Shader>,
+    compiler: shaderc::Compiler,
+    compiled_shaders: HashMap<Id, RawShader>,
+    uploaded_shaders: Vec<ShaderObject>,
+    shader_queue_to_load: Vec<Id>,
 }
 
 impl ShaderManager<'_> {
     pub const DEFAULT_SHADER_EXTENSION: &'static str = ".glsl";
-    pub const DEFAULT_ENTRY_POINT_RAW: *const std::os::raw::c_char = concat!("main", "\0")
-        .as_ptr()
-        .cast::<::std::os::raw::c_char>();
+    pub const DEFAULT_ENTRY_POINT_RAW: &'static CStr =
+        unsafe { CStr::from_ptr("main".as_ptr() as _) };
     const DEFAULT_ENTRY_POINT: &'static str = "main";
 
-    pub fn new(device: &ash::Device) -> Self {
+    pub fn new(instance: &ash::Instance, device: &ash::Device) -> Self {
+        let shader_object = ash::extensions::ext::ShaderObject::new(instance, device);
+
         let compiler = shaderc::Compiler::new().unwrap();
         let mut compiler_options = shaderc::CompileOptions::new().unwrap();
         compiler_options.set_target_env(
@@ -48,10 +61,12 @@ impl ShaderManager<'_> {
         compiler_options.set_warnings_as_errors();
 
         Self {
+            shader_object,
             compiler,
             compiler_options,
-            device: Arc::new(device.clone()),
-            shader_modules: Default::default(),
+            compiled_shaders: Default::default(),
+            uploaded_shaders: Default::default(),
+            shader_queue_to_load: Default::default(),
         }
     }
 
@@ -63,15 +78,17 @@ impl ShaderManager<'_> {
             .unwrap();
 
         for shader_file in shader_files {
-            let shader_source = std::fs::read_to_string(shader_file.as_path()).unwrap();
             if !shader_file
-                .as_path()
                 .to_str()
                 .unwrap()
                 .ends_with(Self::DEFAULT_SHADER_EXTENSION)
             {
                 continue;
             }
+
+            let shader_source = std::fs::read_to_string(shader_file.as_path()).unwrap();
+
+            let size = shader_file.metadata().unwrap().len();
 
             let mut shader_file_split = shader_file
                 .file_name()
@@ -93,13 +110,14 @@ impl ShaderManager<'_> {
                 ),
             };
 
-            self.compile_shader(&shader_source, shader_name, shader_type);
+            self.compile_shader(size, &shader_source, shader_name, shader_type);
         }
     }
 
     #[inline(always)]
     pub fn compile_shader(
         &mut self,
+        _size: u64,
         shader_source: &str,
         shader_name: &str,
         shader_type: shaderc::ShaderKind,
@@ -115,39 +133,47 @@ impl ShaderManager<'_> {
             )
             .unwrap();
 
-        let shader_code =
-            ash::util::read_spv(&mut std::io::Cursor::new(&spirv.as_binary_u8())).unwrap();
+        let current_stage = Self::map_shader_stage(shader_type);
+        let next_stage = Self::map_next_stage(current_stage);
+        let compiled_shader =
+            RawShader::new(current_stage, next_stage, spirv.as_binary_u8().to_vec());
 
-        let shader_module = unsafe { self.create_shader_module(&shader_code) };
-
-        let shader = Shader::new(shader_module, Self::map_shader_stage(shader_type));
-        self.shader_modules.push(shader);
+        self.compiled_shaders.insert(Id::new(), compiled_shader);
     }
 
     #[inline(always)]
-    unsafe fn create_shader_module(&self, spirv: &[u32]) -> vk::ShaderModule {
-        let create_info = vk::ShaderModuleCreateInfo::default().code(spirv);
+    pub fn upload_required_shaders(&mut self) {
+        let shader_infos = self
+            .shader_queue_to_load
+            .drain(..)
+            .map(|compiled_shader_id| {
+                let compiled_shader = self
+                    .compiled_shaders
+                    .get(&compiled_shader_id)
+                    .expect("Shader not found");
 
-        unsafe {
-            self.device
-                .create_shader_module(&create_info, None)
-                .expect("Failed to create shader module!")
-        }
+                vk::ShaderCreateInfoEXT::default()
+                    .flags(vk::ShaderCreateFlagsEXT::LINK_STAGE)
+                    .stage(compiled_shader.stage)
+                    .next_stage(compiled_shader.next_stage)
+                    .name(Self::DEFAULT_ENTRY_POINT_RAW)
+                    .code(&compiled_shader.raw);
+            });
     }
 
     #[inline(always)]
     pub fn clear_shader_modules(&mut self) {
         unsafe {
-            for shader_module in self.shader_modules.drain(..) {
-                self.device
-                    .destroy_shader_module(shader_module.shader_module, None);
+            for shader_object in self.uploaded_shaders.drain(..) {
+                self.shader_object
+                    .destroy_shader(shader_object.shader, None);
             }
         }
     }
 
     #[inline(always)]
-    pub fn get_shaders(&self) -> &[Shader] {
-        &self.shader_modules
+    pub fn get_shaders(&self) -> &[ShaderObject] {
+        self.uploaded_shaders.as_slice()
     }
 
     #[inline(always)]
@@ -157,6 +183,19 @@ impl ShaderManager<'_> {
             shaderc::ShaderKind::Fragment => vk::ShaderStageFlags::FRAGMENT,
             shaderc::ShaderKind::Compute => vk::ShaderStageFlags::COMPUTE,
             _ => unsafe { std::hint::unreachable_unchecked() },
+        }
+    }
+
+    #[inline(always)]
+    pub fn map_next_stage(shader_stage: vk::ShaderStageFlags) -> vk::ShaderStageFlags {
+        match shader_stage {
+            vk::ShaderStageFlags::VERTEX => vk::ShaderStageFlags::FRAGMENT,
+            vk::ShaderStageFlags::TESSELLATION_CONTROL => {
+                vk::ShaderStageFlags::TESSELLATION_EVALUATION
+            }
+            vk::ShaderStageFlags::TESSELLATION_EVALUATION => vk::ShaderStageFlags::GEOMETRY,
+            vk::ShaderStageFlags::GEOMETRY => vk::ShaderStageFlags::FRAGMENT,
+            _ => vk::ShaderStageFlags::empty(),
         }
     }
 }
