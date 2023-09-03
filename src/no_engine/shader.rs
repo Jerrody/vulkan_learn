@@ -24,10 +24,29 @@ impl RawShader {
     }
 }
 
-pub struct ShaderObject {
+pub struct ShaderBinding<'a> {
+    pub binding_description: vk::VertexInputBindingDescription2EXT<'a>,
+    pub attribute_descriptions: Vec<vk::VertexInputAttributeDescription2EXT<'a>>,
+    pub occupied_locations: u32,
+}
+
+pub struct ShaderLayout<'a> {
+    pub bindings: Vec<ShaderBinding<'a>>,
+}
+
+impl ShaderLayout<'_> {
+    pub fn new() -> Self {
+        Self {
+            bindings: Default::default(),
+        }
+    }
+}
+
+pub struct ShaderObject<'a> {
     id: Id,
     stage: vk::ShaderStageFlags,
     shader: vk::ShaderEXT,
+    shader_layouts: ShaderLayout<'a>,
 }
 
 pub struct ShaderManager<'a> {
@@ -35,7 +54,7 @@ pub struct ShaderManager<'a> {
     compiler_options: shaderc::CompileOptions<'a>,
     compiler: shaderc::Compiler,
     compiled_shaders: HashMap<Id, RawShader>,
-    uploaded_shaders: Vec<ShaderObject>,
+    uploaded_shaders: Vec<ShaderObject<'a>>,
     shader_queue_to_load: Vec<Id>,
 }
 
@@ -138,7 +157,9 @@ impl ShaderManager<'_> {
         let compiled_shader =
             RawShader::new(current_stage, next_stage, spirv.as_binary_u8().to_vec());
 
-        self.compiled_shaders.insert(Id::new(), compiled_shader);
+        let id = Id::new();
+        self.compiled_shaders.insert(id, compiled_shader);
+        self.shader_queue_to_load.push(id)
     }
 
     pub fn upload_required_shaders(&mut self) {
@@ -155,7 +176,9 @@ impl ShaderManager<'_> {
                     id: Id::new(),
                     stage: compiled_shader.stage,
                     shader: Default::default(),
+                    shader_layouts: ShaderLayout::new(),
                 };
+
                 self.uploaded_shaders.push(shader_object);
 
                 vk::ShaderCreateInfoEXT::default()
@@ -183,18 +206,18 @@ impl ShaderManager<'_> {
     }
 
     #[inline(always)]
-    pub fn clear_shader_modules(&mut self) {
+    pub fn get_shaders(&self) -> &[ShaderObject] {
+        self.uploaded_shaders.as_slice()
+    }
+
+    #[inline(always)]
+    pub fn clear_uploaded_shaders(&mut self) {
         unsafe {
             for shader_object in self.uploaded_shaders.drain(..) {
                 self.shader_object
                     .destroy_shader(shader_object.shader, None);
             }
         }
-    }
-
-    #[inline(always)]
-    pub fn get_shaders(&self) -> &[ShaderObject] {
-        self.uploaded_shaders.as_slice()
     }
 
     #[inline(always)]
@@ -224,6 +247,6 @@ impl ShaderManager<'_> {
 impl Drop for ShaderManager<'_> {
     #[inline(always)]
     fn drop(&mut self) {
-        self.clear_shader_modules();
+        self.clear_uploaded_shaders();
     }
 }

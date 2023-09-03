@@ -418,7 +418,7 @@ impl Drop for NoEngine<'_> {
             let device = &self.device_manager.device;
             device.device_wait_idle().unwrap();
 
-            self.shader_manager.clear_shader_modules();
+            self.shader_manager.clear_uploaded_shaders();
             device.destroy_command_pool(self.command_manager.command_pool, None);
 
             let swapchain_manager = &self.swapchain_manager;
