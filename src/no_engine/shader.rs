@@ -1,8 +1,16 @@
+mod layouts;
+
 use std::{collections::HashMap, ffi::CStr};
 
 use ash::vk;
 
+use self::layouts::ShaderLayout;
+
 use super::Id;
+
+enum ShaderType {
+    UnlitMesh,
+}
 
 pub struct RawShader {
     pub stage: vk::ShaderStageFlags,
@@ -24,29 +32,11 @@ impl RawShader {
     }
 }
 
-pub struct ShaderBinding<'a> {
-    pub binding_description: vk::VertexInputBindingDescription2EXT<'a>,
-    pub attribute_descriptions: Vec<vk::VertexInputAttributeDescription2EXT<'a>>,
-    pub occupied_locations: u32,
-}
-
-pub struct ShaderLayout<'a> {
-    pub bindings: Vec<ShaderBinding<'a>>,
-}
-
-impl ShaderLayout<'_> {
-    pub fn new() -> Self {
-        Self {
-            bindings: Default::default(),
-        }
-    }
-}
-
 pub struct ShaderObject<'a> {
     id: Id,
     stage: vk::ShaderStageFlags,
     shader: vk::ShaderEXT,
-    shader_layouts: ShaderLayout<'a>,
+    shader_layout: ShaderLayout<'a>,
 }
 
 pub struct ShaderManager<'a> {
@@ -176,7 +166,7 @@ impl ShaderManager<'_> {
                     id: Id::new(),
                     stage: compiled_shader.stage,
                     shader: Default::default(),
-                    shader_layouts: ShaderLayout::new(),
+                    shader_layout: ShaderLayout::new(),
                 };
 
                 self.uploaded_shaders.push(shader_object);
